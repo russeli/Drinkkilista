@@ -1,0 +1,36 @@
+﻿<drinkkilista>
+	<drinkki>
+		<nimi>Cuba Libre</nimi>
+		<ainesosat>
+			<ainesosa kategoria="Viina">
+				<nimi>Rommi (vaalea)</nimi>
+				<maara>4 cl</maara>
+			</ainesosa>
+			<ainesosa kategoria="Mixeri">
+				<nimi>Colalimsa</nimi>
+				<maara>10 cl</maara>
+			</ainesosa>
+			<ainesosa kategoria="Hedelmä">
+				<nimi>Lime</nimi>
+				<maara>0.25 kpl</maara>
+			</ainesosa>
+		</ainesosat>
+	</drinkki>
+	<drinkki>
+		<nimi>Pina colada</nimi>
+		<ainesosat>
+			<ainesosa kategoria="Viina">
+				<nimi>Rommi (vaalea)</nimi>
+				<maara>4 cl</maara>
+			</ainesosa>
+			<ainesosa kategoria="Mixeri">
+				<nimi>Ananasmehu</nimi>
+				<maara>8 cl</maara>
+			</ainesosa>
+			<ainesosa kategoria="Mixeri">
+				<nimi>Kookosmaito</nimi>
+				<maara>2 cl</maara>
+			</ainesosa>
+		</ainesosat>
+	</drinkki>
+</drinkkilista>
