@@ -1,20 +1,24 @@
 package elementit;
 
 import java.io.Serializable;
+import java.util.HashSet;
+import java.util.Set;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 
 @Entity
 @Table(name = "KATEGORIA", uniqueConstraints =
         @UniqueConstraint(columnNames = {"id", "nimi"}))
-public class Kategoria implements Serializable {
+public class Kategoria extends Elementti implements Serializable {
 
     private int ID;
-    private String nimi;
+    private Set<Ainesosa> ainesosat = new HashSet<>();
 
     public Kategoria(String nimi) {
         this(0, nimi);
@@ -46,5 +50,18 @@ public class Kategoria implements Serializable {
 
     public void setNimi(String nimi) {
         this.nimi = nimi;
+    }
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy="kategoria")
+    public Set<Ainesosa> getAinesosat() {
+        return ainesosat;
+    }
+
+    public void setAinesosat(Set<Ainesosa> ainesosat) {
+        this.ainesosat = ainesosat;
+    }
+    
+    public void addAinesosa(Ainesosa ainesosa) {
+        ainesosat.add(ainesosa);
     }
 }

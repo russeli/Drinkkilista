@@ -1,18 +1,25 @@
 package ohjain;
 
+import elementit.Ainesosa;
 import elementit.DrinkinAinesosat;
 import java.util.List;
 import elementit.Drinkki;
+import elementit.Kategoria;
 import hibernate.Hibernate;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import javax.swing.SwingUtilities;
 import kayttoliittyma.UI;
 import saxparser.MySaxParser;
+import utils.MyComparator;
 
 public class Ohjain {
 
-    private List<Drinkki> drinkkilista;
+    private List<Drinkki> drinkkilista = new ArrayList<>();
+    private List<Ainesosa> ainesosalista = new ArrayList<>();
+    private List<Kategoria> kategorialista = new ArrayList<>();
     private Drinkki drinkki;
     private MySaxParser msp;
     private UI ui;
@@ -20,49 +27,12 @@ public class Ohjain {
     private boolean importedFromSQL = false;
 
     public Ohjain() {
-        /*
-         ui = new UI();
-         msp = new MySaxParser();
-         msp.parse("");
-         ekokoelma = msp.getElokuvakokoelma();
-         for(Elokuva ek : ekokoelma.getKokoelma()) {
-         ui.lisaaElokuva(ek);
-         }
-         */
     }
 
     public Ohjain(Hibernate hib, UI ui) {
         this.hib = hib;
         this.ui = ui;
     }
-    /*
-     public void lisaaElokuva(String nimi, String tallennustyyppi, String julkaisuvuosi, String kesto, String genret) {
-     Elokuva elokuva = new Elokuva();
-     if(!nimi.equals(""))
-     elokuva.nimi = nimi;
-     if(!tallennustyyppi.equals(""))
-     elokuva.tallennustyyppi = tallennustyyppi;
-     if(!julkaisuvuosi.equals(""))
-     elokuva.julkaisuvuosi = julkaisuvuosi;
-     if(!kesto.equals(""))
-     elokuva.kesto = kesto;
-     if(!genret.equals(""))
-     for (String genre : genret.split(",")) {
-     elokuva.getGenret().add(genre.trim());
-     }
-     ekokoelma.lisaaElokuva(elokuva);
-     ui.lisaaElokuva(elokuva);
-     }
-
-     public void poistaElokuva(Elokuva elokuva) {
-     ekokoelma.poistaElokuva(elokuva);
-     ui.poistaElokuva(elokuva);
-     }
-
-     public String kokoelmaToXML() {
-     return ekokoelma.toXML();
-     }
-     */
 
     public static void main(String[] args) {
         Hibernate hib = new Hibernate();
@@ -74,14 +44,11 @@ public class Ohjain {
     public void parseXML(String path) {
         importedFromSQL = false;
         MySaxParser msp = new MySaxParser();
-        drinkkilista = msp.parse(path);
-        for (final Drinkki d : drinkkilista) {
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    ui.addDrinkki(d);
-                }
-            });
+        if (msp.parse(path)) {
+            drinkkilista = msp.getDrinkkilista();
+            kategorialista = msp.getKategorialista();
+            ainesosalista = msp.getAinesosalista();
+            addElementsToUI();
         }
     }
 
@@ -96,16 +63,13 @@ public class Ohjain {
     }
 
     public void loadFromSQL() {
-        drinkkilista = hib.loadDatabase();
-        for (final Drinkki d : drinkkilista) {
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    ui.addDrinkki(d);
-                }
-            });
+        if (hib.loadDatabase()) {
+            drinkkilista = hib.getDrinkkiLista();
+            ainesosalista = hib.getAinesosaLista();
+            kategorialista = hib.getKategoriaLista();
+            addElementsToUI();
+            importedFromSQL = true;
         }
-        importedFromSQL = true;
     }
 
     public void toSQL() {
@@ -115,8 +79,56 @@ public class Ohjain {
     }
 
     public void poistaDrinkki(Drinkki drinkki) {
-        if(importedFromSQL) {
+        if (importedFromSQL) {
             hib.poistaDrinkki(drinkki);
         }
+    }
+
+    public void lisaaKategoria(Kategoria kategoria) {
+        kategorialista.add(kategoria);
+        if (importedFromSQL) {
+            hib.addKategoria(kategoria);
+        }
+    }
+
+    public void poistaKategoria(Kategoria kategoria) {
+        if (importedFromSQL) {
+            hib.poistaKategoria(kategoria);
+        }
+    }
+
+    private void addElementsToUI() {
+        Comparator comp = new MyComparator();
+        Collections.sort(drinkkilista, comp);
+        Collections.sort(ainesosalista, comp);
+        Collections.sort(kategorialista, comp);
+        for (final Drinkki d : drinkkilista) {
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    ui.addDrinkki(d);
+                }
+            });
+        }
+        for (final Kategoria k : kategorialista) {
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    ui.addKategoria(k);
+                }
+            });
+        }
+        for (final Ainesosa a : ainesosalista) {
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    ui.addAinesosa(a);
+                }
+            });
+        }
+    }
+
+    public void suljeIstunto() {
+        hib.suljeIstunto();
     }
 }

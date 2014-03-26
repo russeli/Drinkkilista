@@ -5,13 +5,14 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import javax.persistence.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
 @Table(name = "DRINKKI")
-public class Drinkki implements Serializable {
+public class Drinkki extends Elementti  implements Serializable {
     
     private int ID;
-    private String nimi;
     private Set<DrinkinAinesosat> ainesosat = new HashSet<DrinkinAinesosat>();
 
     public Drinkki(int ID, String nimi) {
@@ -42,7 +43,7 @@ public class Drinkki implements Serializable {
         this.nimi = nimi;
     }
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "pk.drinkki", cascade=CascadeType.ALL)
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "pk.drinkki", cascade=CascadeType.ALL, orphanRemoval = true)
     public Set<DrinkinAinesosat> getAinesosat() {
         return ainesosat;
     }
@@ -65,9 +66,9 @@ public class Drinkki implements Serializable {
             sb.append("\t</drinkki>\n");
             return sb.toString();
     }
-    
+    /*
     @Override
     public String toString() {
         return nimi;
-    }
+    }*/
 }

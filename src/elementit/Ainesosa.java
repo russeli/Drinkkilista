@@ -5,10 +5,9 @@ import javax.persistence.*;
 
 @Entity
 @Table(name = "AINESOSA")
-public class Ainesosa implements Serializable {
+public class Ainesosa extends Elementti implements Serializable {
     
     private int ID;
-    private String nimi;
     private Kategoria kategoria;
 
     public Ainesosa(int ID, String nimi, Kategoria kategoria) {
@@ -48,5 +47,6 @@ public class Ainesosa implements Serializable {
 
     public void setKategoria(Kategoria kategoria) {
         this.kategoria = kategoria;
+        kategoria.getAinesosat().add(this);
     }
 }

@@ -24,8 +24,9 @@ public class MySaxParser extends DefaultHandler {
     private final String TAG_NIMI = "nimi";
     private final String TAG_MAARA = "maara";
     public static OutFile outF = new OutFile();
-    private static List<Drinkki> drinkkilista;
-    private static List<Kategoria> kategorialista;
+    private List<Drinkki> drinkkilista;
+    private List<Kategoria> kategorialista;
+    private List<Ainesosa> ainesosalista;
     private static String currentElement;
     private static String content;
     private static Drinkki drinkki;
@@ -40,8 +41,7 @@ public class MySaxParser extends DefaultHandler {
         tagStack = new Stack<String>();
     }
 
-    public List parse(String uri) {
-
+    public boolean parse(String uri) {
         try {
             SAXParserFactory parserFactory = SAXParserFactory.newInstance();
             parserFactory.setValidating(true);
@@ -51,14 +51,26 @@ public class MySaxParser extends DefaultHandler {
             SAXParser parser = parserFactory.newSAXParser();
             parser.parse(uri, this);
         } catch (IOException | SAXException | ParserConfigurationException | FactoryConfigurationError exception) {
+            return false;
         }
+        return true;
+    }
+
+    public List<Drinkki> getDrinkkilista() {
         return drinkkilista;
+    }
+
+    public List<Kategoria> getKategorialista() {
+        return kategorialista;
+    }
+
+    public List<Ainesosa> getAinesosalista() {
+        return ainesosalista;
     }
 
     @Override
     public void startDocument() throws SAXException {
         tagStack.push("");
-        kategorialista = new ArrayList<Kategoria>();
     }
 
     @Override
@@ -68,6 +80,8 @@ public class MySaxParser extends DefaultHandler {
         switch (qName) {
             case TAG_DRINKKILISTA:
                 drinkkilista = new ArrayList<Drinkki>();
+                kategorialista = new ArrayList<Kategoria>();
+                ainesosalista = new ArrayList<Ainesosa>();
                 break;
             case TAG_DRINKKI:
                 drinkki = new Drinkki();
@@ -78,7 +92,8 @@ public class MySaxParser extends DefaultHandler {
             case TAG_AINESOSA:
                 da = new DrinkinAinesosat();
                 ainesosa = new Ainesosa();
-                String kategoriaNimi = attributes.getValue("kategoria");
+
+                String kategoriaNimi = attributes.getValue("kategoria");    //Ei lisätä samaa kategoriaa kahdesti
                 boolean loytyi = false;
                 for (Kategoria kategoria : kategorialista) {
                     if (kategoria.getNimi().equalsIgnoreCase(kategoriaNimi)) {
@@ -88,7 +103,9 @@ public class MySaxParser extends DefaultHandler {
                     }
                 }
                 if (!loytyi) {
-                    ainesosa.setKategoria(new Kategoria(attributes.getValue("kategoria")));
+                    Kategoria kat = new Kategoria(attributes.getValue("kategoria"));
+                    kategorialista.add(kat);
+                    ainesosa.setKategoria(kat);
                 }
                 break;
         }
@@ -122,7 +139,20 @@ public class MySaxParser extends DefaultHandler {
                 }
                 break;
             case TAG_AINESOSA:
-                da.setAinesosa(ainesosa);
+                String ainesosaNimi = ainesosa.getNimi();    //Ei lisätä samaa kategoriaa kahdesti
+                boolean loytyi = false;
+                for (Ainesosa ainesosa : ainesosalista) {
+                    if (ainesosa.getNimi().equalsIgnoreCase(ainesosaNimi)) {
+                        da.setAinesosa(ainesosa);
+                        loytyi = true;
+                        break;
+                    }
+                }
+                if (!loytyi) {
+                    da.setAinesosa(ainesosa);
+                    ainesosalista.add(ainesosa);
+                }
+
                 da.setDrinkki(drinkki);
                 da.setMaara(maara);
                 drinkinAinesosat.add(da);

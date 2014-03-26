@@ -7,6 +7,7 @@ import org.hibernate.cfg.AnnotationConfiguration;
 import org.hibernate.classic.Session;
 import elementit.*;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -14,7 +15,26 @@ import org.hibernate.Query;
 
 public class Hibernate {
 
+    private List<Drinkki> drinkkiLista = new ArrayList<>();
+    private List<Ainesosa> ainesosaLista = new ArrayList<>();
+    private List<Kategoria> kategoriaLista = new ArrayList<>();
+    private static Session istunto;
+
     public Hibernate() {
+        SessionFactory tehdas = new AnnotationConfiguration().configure().buildSessionFactory();
+        istunto = tehdas.openSession();
+    }
+
+    public List<Drinkki> getDrinkkiLista() {
+        return drinkkiLista;
+    }
+
+    public List<Ainesosa> getAinesosaLista() {
+        return ainesosaLista;
+    }
+
+    public List<Kategoria> getKategoriaLista() {
+        return kategoriaLista;
     }
 
     public void parse() {
@@ -77,11 +97,7 @@ public class Hibernate {
     }
 
     public void addDrinkki(Drinkki drinkki) {
-        SessionFactory tehdas = new AnnotationConfiguration().configure().buildSessionFactory();
-        Session istunto = tehdas.openSession();
-        
         Transaction transaktio = null;
-
         try {
             transaktio = istunto.beginTransaction();
 
@@ -132,20 +148,22 @@ public class Hibernate {
             }
             e.printStackTrace();
         } finally {
-            istunto.close();
         }
     }
 
-    public List<Drinkki> loadDatabase() {
-        SessionFactory tehdas = new AnnotationConfiguration().configure().buildSessionFactory();
-        Session istunto = tehdas.openSession();
-
+    public boolean loadDatabase() {
         Transaction transaktio = null;
         List<Drinkki> drinkkilista = null;
+        List<Ainesosa> ainesosalista = null;
+        List<Kategoria> kategorialista = null;
         try {
             transaktio = istunto.beginTransaction();
             String hql = "FROM Drinkki";
-            drinkkilista = istunto.createQuery(hql).list();
+            drinkkiLista = istunto.createQuery(hql).list();
+            hql = "FROM Ainesosa";
+            ainesosaLista = istunto.createQuery(hql).list();
+            hql = "FROM Kategoria";
+            kategoriaLista = istunto.createQuery(hql).list();
             transaktio.commit();
         } catch (Exception e) {
             if (transaktio != null && transaktio.isActive()) {
@@ -154,18 +172,15 @@ public class Hibernate {
                 } catch (HibernateException e1) {
                     System.err.println("Tapahtuman peruutus epäonnistui.");
                 }
+                return false;
             }
             e.printStackTrace();
         } finally {
-            istunto.close();
         }
-        return drinkkilista;
+        return true;
     }
 
     public void poistaDrinkki(Drinkki drinkki) {
-        SessionFactory tehdas = new AnnotationConfiguration().configure().buildSessionFactory();
-        Session istunto = tehdas.openSession();
-
         Transaction transaktio = null;
         try {
             transaktio = istunto.beginTransaction();
@@ -181,7 +196,48 @@ public class Hibernate {
             }
             e.printStackTrace();
         } finally {
-            istunto.close();
         }
+    }
+
+    public void addKategoria(Kategoria kategoria) {
+        Transaction transaktio = null;
+        try {
+            transaktio = istunto.beginTransaction();
+            istunto.saveOrUpdate(kategoria);
+            transaktio.commit();
+        } catch (Exception e) {
+            if (transaktio != null && transaktio.isActive()) {
+                try {
+                    transaktio.rollback();
+                } catch (HibernateException e1) {
+                    System.err.println("Tapahtuman peruutus epäonnistui.");
+                }
+            }
+            e.printStackTrace();
+        } finally {
+        }
+    }
+    
+    public void poistaKategoria(Kategoria kategoria) {
+        Transaction transaktio = null;
+        try {
+            transaktio = istunto.beginTransaction();
+            istunto.delete(kategoria);
+            transaktio.commit();
+        } catch (Exception e) {
+            if (transaktio != null && transaktio.isActive()) {
+                try {
+                    transaktio.rollback();
+                } catch (HibernateException e1) {
+                    System.err.println("Tapahtuman peruutus epäonnistui.");
+                }
+            }
+            e.printStackTrace();
+        } finally {
+        }
+    }
+
+    public void suljeIstunto() {
+        istunto.close();
     }
 }

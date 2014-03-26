@@ -1,7 +1,10 @@
 package kayttoliittyma;
 
+import utils.SpringUtilities;
+import elementit.Ainesosa;
 import elementit.DrinkinAinesosat;
 import elementit.Drinkki;
+import elementit.Kategoria;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Dimension;
@@ -10,6 +13,8 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -42,40 +47,36 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.filechooser.FileFilter;
 import ohjain.Ohjain;
 
-public class UI extends JFrame implements ActionListener, ListSelectionListener {
+public class UI extends JFrame implements ActionListener, ListSelectionListener, WindowListener {
 
     private JPanel sisältöpaneeli;
     private JPanel radiopaneeli, listapaneeli, detailpaneeli, nappulapaneeli;
     private JPanel dialogiPaneeli, lisaaPaneeli;
     private JPanel lisaaKategoriaKortti, lisaaAinesosaKortti, lisaaDrinkkiKortti; //Dialogin kortit
-    private JPanel lisaaKategoriaKorttiWrapper; //Ja niitten wrapperit T_T
     private JMenuBar menuBar;
     private JMenu menu, submenu;
     private JMenuItem menuItem;
     private JScrollPane listScrollPane, detailScrollPane;
-    private JButton lisaaDrinkkiPainike, poistaDrinkkiPainike, muokkaaTietojaPainike;
+    private JButton lisaaPainike, poistaPainike, muokkaaTietojaPainike;
     private JLabel kategorianimilabel, ainesosanimilabel, drinkkinimilabel;
     private JLabel kategorialabel, ainesosakategorialabel, julkaisuvuosilabel, tallennustyyppilabel, kestolabel, genrelabel;
     private JTextField kategorianimikentta, ainesosanimikentta, drinkkinimikentta;
     private JTextField julkaisuvuosikentta, tallennustyyppikentta, kestokentta, genrekentta;
     private JTextArea detailkentta;
     private JRadioButton drinkkiButton, ainesosaButton, kategoriaButton;
+    private ButtonGroup radioButtonGroup;
     private JList drinkkilista;
-    private DefaultListModel listmodel;
-    private JComboBox lisaysValinta, kategoriaValinta;
+    private DefaultListModel drinkkiListmodel, kategoriaListmodel, ainesosaListmodel;
+    private JComboBox kategoriaValinta;
     private List<JComboBox> ainesosaValinnat;
     private Ohjain ohjain;
     private final String drinkkiString = "Drinkki", ainesosaString = "Ainesosa", kategoriaString = "Kategoria";
-    private final String[] dialogiValinnat = {drinkkiString, ainesosaString, kategoriaString};
 
     public UI() {
         alustaKomponentit();
     }
 
     private void alustaKomponentit() {
-        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-        setTitle("Drinkkikokoelma");
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
         //setPreferredSize(new Dimension(320,105));
 
         //MENU
@@ -135,13 +136,9 @@ public class UI extends JFrame implements ActionListener, ListSelectionListener 
         dialogiPaneeli = new JPanel();
         dialogiPaneeli.setLayout(new BoxLayout(dialogiPaneeli, BoxLayout.PAGE_AXIS));
         //lisättävän elementin valintapaneeli ja combobox
-        lisaysValinta = new JComboBox(dialogiValinnat);
-        lisaysValinta.setSelectedIndex(0);
         lisaaPaneeli = new JPanel(new CardLayout());
         lisaaKategoriaKortti = new JPanel();
         lisaaKategoriaKortti.setLayout(new SpringLayout());
-        lisaaKategoriaKorttiWrapper = new JPanel();
-        lisaaKategoriaKorttiWrapper.setLayout(new BoxLayout(lisaaKategoriaKorttiWrapper, BoxLayout.PAGE_AXIS));
         lisaaAinesosaKortti = new JPanel();
         lisaaAinesosaKortti.setLayout(new SpringLayout());
         lisaaDrinkkiKortti = new JPanel();
@@ -163,8 +160,6 @@ public class UI extends JFrame implements ActionListener, ListSelectionListener 
 
         lisaaKategoriaKortti.add(kategorianimilabel);
         lisaaKategoriaKortti.add(kategorianimikentta);
-        lisaaKategoriaKorttiWrapper.add(lisaaKategoriaKortti);
-        lisaaKategoriaKorttiWrapper.add(Box.createVerticalGlue());
         lisaaAinesosaKortti.add(ainesosanimilabel);
         lisaaAinesosaKortti.add(ainesosanimikentta);
         lisaaAinesosaKortti.add(kategorialabel);
@@ -183,13 +178,12 @@ public class UI extends JFrame implements ActionListener, ListSelectionListener 
         //lisaaPaneeli.add(lisaaDrinkkiKortti, "Drinkki");
         //lisaaPaneeli.add(lisaaAinesosaKortti, "Ainesosa");
         //lisaaPaneeli.add(lisaaKategoriaKorttiWrapper, "Kategoria");
-        dialogiPaneeli.add(lisaysValinta);
         dialogiPaneeli.add(lisaaPaneeli);
 
         //PAINIKKEET
-        lisaaDrinkkiPainike = new JButton("Lisää drinkki");
-        poistaDrinkkiPainike = new JButton("Poista drinkki");
-        poistaDrinkkiPainike.setEnabled(false);
+        lisaaPainike = new JButton("Lisää drinkki");
+        poistaPainike = new JButton("Poista drinkki");
+        poistaPainike.setEnabled(false);
         muokkaaTietojaPainike = new JButton("Muokkaa tietoja");
         muokkaaTietojaPainike.setEnabled(false);
 
@@ -201,10 +195,10 @@ public class UI extends JFrame implements ActionListener, ListSelectionListener 
         ainesosaButton.setActionCommand(ainesosaString);
         kategoriaButton = new JRadioButton(kategoriaString);
         kategoriaButton.setActionCommand(kategoriaString);
-        ButtonGroup group = new ButtonGroup();
-        group.add(drinkkiButton);
-        group.add(ainesosaButton);
-        group.add(kategoriaButton);
+        radioButtonGroup = new ButtonGroup();
+        radioButtonGroup.add(drinkkiButton);
+        radioButtonGroup.add(ainesosaButton);
+        radioButtonGroup.add(kategoriaButton);
         RadioButtonListener rbl = new RadioButtonListener(this);
         drinkkiButton.addActionListener(rbl);
         ainesosaButton.addActionListener(rbl);
@@ -214,13 +208,16 @@ public class UI extends JFrame implements ActionListener, ListSelectionListener 
         radiopaneeli.add(kategoriaButton);
 
         //DRINKKILISTA
-        listmodel = new DefaultListModel();
-        drinkkilista = new JList(listmodel);
+        drinkkiListmodel = new DefaultListModel();
+        drinkkilista = new JList(drinkkiListmodel);
         drinkkilista.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         drinkkilista.setSelectedIndex(0);
         drinkkilista.addListSelectionListener(this);
         drinkkilista.setVisibleRowCount(8);
         drinkkilista.setPrototypeCellValue("Drinkintosipitkänimi");
+
+        kategoriaListmodel = new DefaultListModel();
+        ainesosaListmodel = new DefaultListModel();
         //elokuvalista.setPreferredSize(new Dimension(elokuvalista.getFixedCellWidth(), elokuvalista.getFixedCellHeight() * 8));
         listScrollPane.setPreferredSize(new Dimension(drinkkilista.getFixedCellWidth(), drinkkilista.getFixedCellHeight() * 8));
         listScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -244,8 +241,8 @@ public class UI extends JFrame implements ActionListener, ListSelectionListener 
         detailpaneeli.add(muokkaaTietojaPainike, BorderLayout.PAGE_END);
 
         //NAPPULAT
-        nappulapaneeli.add(lisaaDrinkkiPainike);
-        nappulapaneeli.add(poistaDrinkkiPainike);
+        nappulapaneeli.add(lisaaPainike);
+        nappulapaneeli.add(poistaPainike);
 
         //listapaneeli.add(elokuvalista);
         listapaneeli.add(radiopaneeli);
@@ -257,49 +254,70 @@ public class UI extends JFrame implements ActionListener, ListSelectionListener 
         setContentPane(sisältöpaneeli);
         setJMenuBar(menuBar);
 
-        lisaaDrinkkiPainike.addActionListener(new ActionListener() {
+        lisaaPainike.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                JOptionPane jop = new JOptionPane();
-                jop.add(dialogiPaneeli);
-                jop.createDialog("asd");
-                jop.setVisible(true);
-
-                int result = JOptionPane.showConfirmDialog(
-                        null,
-                        dialogiPaneeli,
-                        "Lisää elokuva",
-                        JOptionPane.OK_CANCEL_OPTION);
-                if (result == JOptionPane.OK_OPTION) {
-                    String nimi = kategorianimikentta.getText();
-                    String kategoria = tallennustyyppikentta.getText();
-                    String julkaisuvuosi = julkaisuvuosikentta.getText();
-                    String kesto = kestokentta.getText();
-                    String genre = genrekentta.getText();
-                    //ohjain.lisaaElokuva(nimi, tallennustyyppi, julkaisuvuosi, kesto, genre);
+                int result;
+                switch (radioButtonGroup.getSelection().getActionCommand()) {
+                    case drinkkiString:
+                        result = JOptionPane.showConfirmDialog(
+                                null,
+                                dialogiPaneeli,
+                                "Lisää drinkki",
+                                JOptionPane.OK_CANCEL_OPTION);
+                        if (result == JOptionPane.OK_OPTION) {
+                            String nimi = kategorianimikentta.getText();
+                            String kategoria = tallennustyyppikentta.getText();
+                            String julkaisuvuosi = julkaisuvuosikentta.getText();
+                            String kesto = kestokentta.getText();
+                            String genre = genrekentta.getText();
+                            //ohjain.lisaaElokuva(nimi, tallennustyyppi, julkaisuvuosi, kesto, genre);
+                        }
+                        kategorianimikentta.setText("");
+                        julkaisuvuosikentta.setText("");
+                        tallennustyyppikentta.setText("");
+                        kestokentta.setText("");
+                        genrekentta.setText("");
+                        break;
+                    case ainesosaString:
+                        break;
+                    case kategoriaString:
+                        result = JOptionPane.showConfirmDialog(
+                                null,
+                                lisaaKategoriaKortti,
+                                "Lisää kategoria",
+                                JOptionPane.OK_CANCEL_OPTION);
+                        if (result == JOptionPane.OK_OPTION) {
+                            String nimi = kategorianimikentta.getText();
+                            Kategoria kategoria = new Kategoria(nimi);
+                            ohjain.lisaaKategoria(kategoria);
+                            kategoriaListmodel.addElement(kategoria);
+                            //ohjain.lisaaElokuva(nimi, tallennustyyppi, julkaisuvuosi, kesto, genre);
+                        }
+                        kategorianimikentta.setText("");
+                        break;
                 }
-                kategorianimikentta.setText("");
-                julkaisuvuosikentta.setText("");
-                tallennustyyppikentta.setText("");
-                kestokentta.setText("");
-                genrekentta.setText("");
-                //If you're here, the return value was null/empty.
-                //setLabel("Come on, finish the sentence!");
             }
         });
 
-        poistaDrinkkiPainike.addActionListener(new ActionListener() {
+        poistaPainike.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
-                if (drinkkilista.getSelectedIndex() != -1) {
-                    Drinkki drinkki = (Drinkki) listmodel.getElementAt(drinkkilista.getSelectedIndex());
-                    ohjain.poistaDrinkki(drinkki);
-                    listmodel.removeElement(drinkki);
-                    detailkentta.setText("");
-                    drinkkilista.clearSelection();
-                    /*elokuvalista.revalidate();
-                     paivitaNakyma();*/
+                switch (radioButtonGroup.getSelection().getActionCommand()) {
+                    case drinkkiString:
+                        Drinkki drinkki = (Drinkki) drinkkiListmodel.getElementAt(drinkkilista.getSelectedIndex());
+                        ohjain.poistaDrinkki(drinkki);
+                        drinkkiListmodel.removeElement(drinkki);
+                        drinkkilista.clearSelection();
+                        break;
+                    case ainesosaString:
+                        break;
+                    case kategoriaString:
+                        Kategoria kategoria = (Kategoria) kategoriaListmodel.getElementAt(drinkkilista.getSelectedIndex());
+                        ohjain.poistaKategoria(kategoria);
+                        kategoriaListmodel.removeElement(kategoria);
+                        drinkkilista.clearSelection();
+                        break;
                 }
             }
         });
@@ -361,27 +379,16 @@ public class UI extends JFrame implements ActionListener, ListSelectionListener 
          }
          });
          */
-        lisaysValinta.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                lisaysValinta.getSelectedItem();
-                ((CardLayout) lisaaPaneeli.getLayout()).show(lisaaPaneeli, lisaysValinta.getSelectedItem().toString());
-                System.out.println(lisaysValinta.getSelectedItem());
-                lisaaPaneeli.removeAll();
-                if (lisaysValinta.getSelectedItem().equals("Kategoria")) {
-                    lisaaPaneeli.add(lisaaKategoriaKortti);
-                }
-                dialogiPaneeli.revalidate();
-                dialogiPaneeli.repaint();
-            }
-        });
 
         //setPreferredSize(new Dimension(520, 250));
         setPreferredSize(new Dimension(498, 268));
-        setLocation((dim.width - this.getSize().width) / 2, (dim.height - this.getSize().height) / 2);
+        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+        setTitle("Drinkkikokoelma");
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
         setResizable(false);
         pack();
-
+        setLocation((dim.width - this.getSize().width) / 2, (dim.height - this.getSize().height) / 2);
+        addWindowListener(this);
         setVisible(true);
     }
 
@@ -402,28 +409,53 @@ public class UI extends JFrame implements ActionListener, ListSelectionListener 
     @Override
     public void valueChanged(ListSelectionEvent lse) {
         if (!lse.getValueIsAdjusting() && drinkkilista.getSelectedIndex() != -1) {
-            poistaDrinkkiPainike.setEnabled(true);
-            muokkaaTietojaPainike.setEnabled(true);
-
-            Drinkki drinkki = (Drinkki) listmodel.getElementAt(drinkkilista.getSelectedIndex());
-
             StringBuilder teksti = new StringBuilder();
-            teksti.append(drinkki.getNimi()).append("\n");
-            for (DrinkinAinesosat da : drinkki.getAinesosat()) {
-                teksti.append("    ").append(da.getAinesosa().getNimi());
-                teksti.append("\t").append(da.getMaara()).append("\n");
-            }
+            switch (radioButtonGroup.getSelection().getActionCommand()) {
+                case drinkkiString:
+                    poistaPainike.setEnabled(true);
+                    muokkaaTietojaPainike.setEnabled(true);
 
-            detailkentta.setText(teksti.toString());
-            paivitaNakyma();
+                    Drinkki drinkki = (Drinkki) drinkkiListmodel.getElementAt(drinkkilista.getSelectedIndex());
+
+                    teksti.append(drinkki.getNimi()).append("\n");
+                    for (DrinkinAinesosat da : drinkki.getAinesosat()) {
+                        teksti.append("    ").append(da.getAinesosa().getNimi());
+                        teksti.append("\t").append(da.getMaara()).append("\n");
+                    }
+                    detailkentta.setText(teksti.toString());
+                    break;
+                case ainesosaString:
+                    poistaPainike.setEnabled(true);
+                    muokkaaTietojaPainike.setEnabled(true);
+
+                    Ainesosa ainesosa = (Ainesosa) ainesosaListmodel.getElementAt(drinkkilista.getSelectedIndex());
+
+                    teksti.append(ainesosa.getNimi()).append("\n");
+                    teksti.append("Kategoria: ").append(ainesosa.getKategoria().getNimi());
+                    detailkentta.setText(teksti.toString());
+                    break;
+                case kategoriaString:
+                    poistaPainike.setEnabled(true);
+                    //muokkaaTietojaPainike.setEnabled(true);
+                    break;
+            }
         } else if (drinkkilista.getSelectedIndex() == -1) {
-            poistaDrinkkiPainike.setEnabled(false);
+            poistaPainike.setEnabled(false);
             muokkaaTietojaPainike.setEnabled(false);
+            detailkentta.setText("");
         }
     }
 
     public void addDrinkki(Drinkki drinkki) {
-        listmodel.addElement(drinkki);
+        drinkkiListmodel.addElement(drinkki);
+    }
+
+    public void addKategoria(Kategoria kategoria) {
+        kategoriaListmodel.addElement(kategoria);
+    }
+
+    public void addAinesosa(Ainesosa ainesosa) {
+        ainesosaListmodel.addElement(ainesosa);
     }
 
     public void rekisteroiOhjain(Ohjain ohjain) {
@@ -445,7 +477,9 @@ public class UI extends JFrame implements ActionListener, ListSelectionListener 
         int retrival;
         switch (source.getActionCommand()) {
             case "FROM_XML":
-                listmodel.clear();
+                drinkkiListmodel.clear();
+                ainesosaListmodel.clear();
+                kategoriaListmodel.clear();
                 chooser = new JFileChooser();
                 filter = new ExtensionFilter("XML file", ".xml");
                 chooser.addChoosableFileFilter(filter);
@@ -474,7 +508,9 @@ public class UI extends JFrame implements ActionListener, ListSelectionListener 
                 }
                 break;
             case "FROM_SQL":
-                listmodel.clear();
+                drinkkiListmodel.clear();
+                ainesosaListmodel.clear();
+                kategoriaListmodel.clear();
                 ohjain.loadFromSQL();
                 break;
             case "TO_SQL":
@@ -487,6 +523,52 @@ public class UI extends JFrame implements ActionListener, ListSelectionListener 
     }
 
     public void vaihdaLista(String actionCommand) {
-        System.out.println(actionCommand);
+        switch (actionCommand) {
+            case drinkkiString:
+                drinkkilista.setModel(drinkkiListmodel);
+                lisaaPainike.setText("Lisää drinkki");
+                poistaPainike.setText("Poista drinkki");
+                break;
+            case ainesosaString:
+                drinkkilista.setModel(ainesosaListmodel);
+                lisaaPainike.setText("Lisää ainesosa");
+                poistaPainike.setText("Poista ainesosa");
+                break;
+            case kategoriaString:
+                drinkkilista.setModel(kategoriaListmodel);
+                lisaaPainike.setText("Lisää kategoria");
+                poistaPainike.setText("Poista kategoria");
+                break;
+        }
+    }
+
+    @Override
+    public void windowOpened(WindowEvent we) {
+    }
+
+    @Override
+    public void windowClosing(WindowEvent we) {
+        ohjain.suljeIstunto();
+    }
+
+    @Override
+    public void windowClosed(WindowEvent we) {
+        System.exit(0);
+    }
+
+    @Override
+    public void windowIconified(WindowEvent we) {
+    }
+
+    @Override
+    public void windowDeiconified(WindowEvent we) {
+    }
+
+    @Override
+    public void windowActivated(WindowEvent we) {
+    }
+
+    @Override
+    public void windowDeactivated(WindowEvent we) {
     }
 }
